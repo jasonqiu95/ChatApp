@@ -4,6 +4,7 @@ import java.awt.event.ActionListener;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.PrintWriter;
 import java.io.Serializable;
@@ -27,6 +28,25 @@ public class ChatClient {
     private PrintWriter out;
     private ClientGUI gui;
 
+    
+    private class FetchUserNamesTask extends Thread {
+    	Socket socket;
+    	
+    	public FetchUserNamesTask(Socket s) {
+    		socket = s;
+    	}
+    	@Override
+    	public void run() {
+    		try {
+				ObjectInputStream oos = new ObjectInputStream(socket.getInputStream());
+				String[] names = (String[])oos.readObject();
+				System.out.println(names);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+    	}
+    }
+    
     // this class runs in another thread and always listens for
     // server message and displays it in messageArea
     private class ServerListener extends Thread {
@@ -55,10 +75,6 @@ public class ChatClient {
      */
     public ChatClient() {
     	gui = new ClientGUI();
-        // Layout GUI
-        gui.messageArea.setEditable(false);
-        gui.frame.getContentPane().add(gui.dataField, "North");
-        gui.frame.getContentPane().add(new JScrollPane(gui.messageArea), "Center");
 
         // Add Listeners
         gui.dataField.addActionListener(new ActionListener() {
@@ -144,6 +160,7 @@ public class ChatClient {
             gui.messageArea.append(in.readLine() + "\n");
         }
         new ServerListener().start();
+        //new FetchUserNamesTask(socket).start();
     }
 
     /**

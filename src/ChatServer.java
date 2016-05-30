@@ -5,6 +5,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
@@ -36,6 +37,8 @@ public class ChatServer {
 	
 	private static JFrame frame;
 	private static JTextArea messageArea;
+	// global across all ClientServer
+    private static Map<String, ClientConnection> clients = new HashMap<String, ClientConnection>();
 
     /**
      * Application method to run the server runs in an infinite loop
@@ -117,6 +120,27 @@ public class ChatServer {
 	        }
     	}
     }
+    
+    private static class UpdateUserNameTask extends Thread {
+    	Socket socket;
+    	
+    	public UpdateUserNameTask(Socket s) {
+    		socket = s;
+    	}
+    	
+    	@Override
+    	public void run() {
+    		while (true) {
+	    		String[] names = (String[])clients.keySet().toArray();
+	    		try {
+					ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
+					oos.writeObject(names);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+    		}
+    	}
+    }
 
     /**
      * A private thread to handle client requests on a particular
@@ -125,8 +149,7 @@ public class ChatServer {
     private static class ClientServer extends Thread {
         private Socket socket;
         private String userName;
-        // global across all ClientServer
-        private static Map<String, ClientConnection> clients = new HashMap<String, ClientConnection>();
+        
         // this is used to tell whether the client is actually logged in
         // because he could try to use others' name and doesn't log in
         private boolean served;
@@ -172,6 +195,9 @@ public class ChatServer {
                 out.println("Hello, " + userName + ".");
                 out.println("Enter \"bye\" to quit\n");
 
+                // update username
+                //new UpdateUserNameTask(socket).start();
+                
                 // Get messages from the client, line by line
                 while (true) {
                     String input = client.reader.readLine();
