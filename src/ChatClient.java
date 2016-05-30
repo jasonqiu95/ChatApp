@@ -25,9 +25,7 @@ public class ChatClient {
 
     private BufferedReader in;
     private PrintWriter out;
-    private JFrame frame = new JFrame("Client");
-    private JTextField dataField = new JTextField(40);
-    private JTextArea messageArea = new JTextArea(8, 60);
+    private ClientGUI gui;
 
     // this class runs in another thread and always listens for
     // server message and displays it in messageArea
@@ -42,7 +40,7 @@ public class ChatClient {
     				if (response == null || response.equals("")) {
                         System.exit(0);
     				}
-    				messageArea.append(response + "\n");
+    				gui.messageArea.append(response + "\n");
     			} catch (IOException e) {
     				System.out.println("Cannot read from input stream");
     			}
@@ -56,14 +54,14 @@ public class ChatClient {
      * listener sends the textfield contents to the server.
      */
     public ChatClient() {
-
+    	gui = new ClientGUI();
         // Layout GUI
-        messageArea.setEditable(false);
-        frame.getContentPane().add(dataField, "North");
-        frame.getContentPane().add(new JScrollPane(messageArea), "Center");
+        gui.messageArea.setEditable(false);
+        gui.frame.getContentPane().add(gui.dataField, "North");
+        gui.frame.getContentPane().add(new JScrollPane(gui.messageArea), "Center");
 
         // Add Listeners
-        dataField.addActionListener(new ActionListener() {
+        gui.dataField.addActionListener(new ActionListener() {
             /**
              * Responds to pressing the enter key in the textfield
              * by sending the contents of the text field to the
@@ -74,10 +72,10 @@ public class ChatClient {
              */
             public void actionPerformed(ActionEvent e) {
             	System.out.println("Client is sending message to server");
-                out.println(dataField.getText());
-                System.out.println("Client sent message " + dataField.getText());
+                out.println(gui.dataField.getText());
+                System.out.println("Client sent message " + gui.dataField.getText());
 
-                dataField.setText("");
+                gui.dataField.setText("");
             }
         });
     }
@@ -87,14 +85,14 @@ public class ChatClient {
     		String response;
     		// first read two lines of description
     		for (int i = 0; i < 2; i++) {
-    			messageArea.append(in.readLine()+"\n");
+    			gui.messageArea.append(in.readLine()+"\n");
     		}
     		response = in.readLine();
     		System.out.println(response.equals("AGAIN\n"));
     		System.out.println("response" + response);
     		if (response.equals("AGAIN")) {
     			String userName = JOptionPane.showInputDialog(
-    	                frame,
+    	                gui.frame,
     	                "Enter your user name:",
     	                "Welcome to the EasyChat",
     	                JOptionPane.QUESTION_MESSAGE);
@@ -121,12 +119,12 @@ public class ChatClient {
 
         // Get the server address from a dialog box.
         String serverAddress = JOptionPane.showInputDialog(
-            frame,
+            gui.frame,
             "Enter IP Address of the Server:",
             "Welcome to the EasyChat",
             JOptionPane.QUESTION_MESSAGE);
         String userName = JOptionPane.showInputDialog(
-                frame,
+                gui.frame,
                 "Enter your user name:",
                 "Welcome to the EasyChat",
                 JOptionPane.QUESTION_MESSAGE);
@@ -141,9 +139,9 @@ public class ChatClient {
         String response = login();
         
         // Consume the initial welcoming messages from the server
-        messageArea.append(response+"\n");
+        gui.messageArea.append(response+"\n");
         for (int i = 0; i < 2; i++) {
-            messageArea.append(in.readLine() + "\n");
+            gui.messageArea.append(in.readLine() + "\n");
         }
         new ServerListener().start();
     }
@@ -153,9 +151,9 @@ public class ChatClient {
      */
     public static void main(String[] args) throws Exception {
         ChatClient client = new ChatClient();
-        client.frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        client.frame.pack();
-        client.frame.setVisible(true);
+        client.gui.frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        client.gui.frame.pack();
+        client.gui.frame.setVisible(true);
         client.connectToServer();
     }
 }
