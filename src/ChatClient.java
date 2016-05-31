@@ -9,6 +9,7 @@ import java.io.ObjectOutputStream;
 import java.io.PrintWriter;
 import java.io.Serializable;
 import java.net.Socket;
+import java.util.Arrays;
 
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
@@ -27,26 +28,8 @@ public class ChatClient {
     private ObjectInputStream in;
     private ObjectOutputStream out;
     private ClientGUI gui;
+    String target = "all";
 
-    // a specialized task to fetch all currently logged in user names
-    private class FetchUserNamesTask extends Thread {
-    	Socket socket;
-    	
-    	public FetchUserNamesTask(Socket s) {
-    		socket = s;
-    	}
-    	@Override
-    	public void run() {
-    		try {
-				ObjectInputStream oos = new ObjectInputStream(socket.getInputStream());
-				String[] names = (String[])oos.readObject();
-				System.out.println(names);
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-    	}
-    }
-    
     // this class runs in another thread and always listens for
     // server message and displays it in messageArea
     private class ServerListener extends Thread {
@@ -54,15 +37,22 @@ public class ChatClient {
     	public void run() {
     		while (true) {
     			try {
-    				System.out.println("Client is listening for input");
     				ChatMessage response = (ChatMessage)in.readObject();
-    				System.out.println("Client is receiving input = " + response);
     				if (response == null ||
     					response.content == null ||
     					response.content.equals("")) {
                         System.exit(0);
     				}
-    				gui.messageArea.append(response.content + "\n");
+    				switch (response.type) {
+    					case ChatMessage.BROAD:
+    						gui.messageArea.append(response.content + "\n");
+    						break;
+    					case ChatMessage.UPDATE:
+    						gui.changeList(response.names);
+    						break;
+    					default:
+    						break;
+    				}
     			} catch (Exception e) {
     				System.out.println("Cannot read from input stream");
     			}
@@ -77,6 +67,7 @@ public class ChatClient {
      */
     public ChatClient() {
     	gui = new ClientGUI();
+    	gui.client = this;
 
         // Add Listeners
         gui.dataField.addActionListener(new ActionListener() {
@@ -90,14 +81,17 @@ public class ChatClient {
              */
             public void actionPerformed(ActionEvent e) {
             	System.out.println("Client is sending message to server");
-            	ChatMessage mess = new ChatMessage(ChatMessage.BROAD, gui.dataField.getText(), null);
+            	ChatMessage mess;
+            	if (target.equals("all"))
+            		mess = new ChatMessage(ChatMessage.BROAD, gui.dataField.getText(), null);
+            	else 
+            		mess = new ChatMessage(ChatMessage.PRIV, gui.dataField.getText(), target);
             	try {
 					out.writeObject(mess);
 				} catch (IOException e1) {
 					e1.printStackTrace();
 				}
                 System.out.println("Client sent message " + gui.dataField.getText());
-
                 gui.dataField.setText("");
             }
         });
@@ -161,7 +155,7 @@ public class ChatClient {
         // Consume the initial welcoming messages from the server
         gui.messageArea.append(response+"\n");
         new ServerListener().start();
-        //new FetchUserNamesTask(socket).start();
+//        new FetchUserNamesTask().start();
     }
 
     /**

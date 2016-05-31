@@ -8,9 +8,9 @@ public class ChatMessage implements Serializable {
 	static final int AGAIN = 4;
 	
 	int type;
-	String from;
 	String content;
 	String target;  // for priv message
+	String[] names;
 	
 	public ChatMessage(int type, String content, String target) {
 		this.type = type;

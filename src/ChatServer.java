@@ -11,6 +11,7 @@ import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -180,6 +181,8 @@ public class ChatServer {
 						case ChatMessage.BROAD:
 							keepGoing = handleBroad(mess);
 							break;
+						case ChatMessage.PRIV:
+							keepGoing = handlePriv(mess);
 						default:
 							break;
 					}
@@ -188,7 +191,7 @@ public class ChatServer {
 				// update username
 				// new UpdateUserNameTask(socket).start();
 			} catch (Exception e) {
-				log("Error handling client " + mess.from + ": " + e);
+				log("Error handling client " + client.name + ": " + e);
 			} finally {
 				try {
 					socket.close();
@@ -202,13 +205,27 @@ public class ChatServer {
 							conn.writer.writeObject(new ChatMessage(ChatMessage.BROAD, 
 																	client.name +
 																	" left.", null));
+							conn.update();
 						}
 					}
-				} catch (IOException e) {
+				} catch (Exception e) {
 					log("Couldn't close a socket, what's going on?");
 				}
 				log("Connection with client " + client.name + " closed");
 			}
+		}
+		
+		private boolean handlePriv(ChatMessage mess)
+				throws IOException, ClassNotFoundException {
+			if (mess.content == null || mess.content.equals("bye")) {
+				return false;
+			}
+			ClientConnection conn = clients.get(mess.target);
+			conn.writer.writeObject(new ChatMessage(ChatMessage.BROAD,
+													"**PRIVATE** " 
+													+ client.name + " says: " 
+													+ mess.content, null));
+			return true;
 		}
 		
 		/*
@@ -257,6 +274,10 @@ public class ChatServer {
 							"Hello, " + userName + ".\n"
 							+ "Enter \"bye\" to quit\n",
 							null));
+			for (ClientConnection conn : clients.values()) {
+				conn.writer.writeObject(new ChatMessage(ChatMessage.BROAD, client.name + " joined.", null));
+				conn.update();
+			}
         }
 	}
 
@@ -279,6 +300,15 @@ public class ChatServer {
 			this.writer = writer;
 			this.socket = socket;
 			this.name = name;
+		}
+		
+		public void update() 
+				throws IOException, ClassNotFoundException {
+			String[] names = new String[clients.keySet().size()];
+			clients.keySet().toArray(names);
+			ChatMessage newMess = new ChatMessage(ChatMessage.UPDATE, "update", null);
+			newMess.names  = names;
+			writer.writeObject(newMess);
 		}
 	}
 }

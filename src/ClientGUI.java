@@ -1,5 +1,6 @@
 import java.awt.Dimension;
 import java.awt.Font;
+import java.util.Arrays;
 
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -21,8 +22,9 @@ public class ClientGUI implements ListSelectionListener {
     JList list;
     JSplitPane splitPane;
     JLabel user;
-    String[] userNames = { "Bird", "Cat", "Dog", "Rabbit", "Pig", "dukeWaveRed",
-            "kathyCosmo", "lainesTongue", "left", "middle", "right", "stickerface"};
+    JScrollPane listScrollPane;
+    String[] userNames = { "All"};
+    ChatClient client;
     
     public ClientGUI() {
     	frame = new JFrame("Client");
@@ -40,7 +42,7 @@ public class ClientGUI implements ListSelectionListener {
         list.addListSelectionListener(this);
          
         
-        JScrollPane listScrollPane = new JScrollPane(list);
+        listScrollPane = new JScrollPane(list);
         user = new JLabel();
         user.setFont(user.getFont().deriveFont(Font.ITALIC));
         user.setHorizontalAlignment(JLabel.CENTER);
@@ -65,6 +67,21 @@ public class ClientGUI implements ListSelectionListener {
 
 	@Override
 	public void valueChanged(ListSelectionEvent e) {
-		
+		JList list = (JList) e.getSource();
+		client.target = userNames[list.getSelectedIndex()];
+	}
+	
+	public void changeList(String[] values) {
+		String[] names = new String[values.length + 1];
+		names[0] = "All";
+		for (int i = 1; i < names.length; i++) {
+			names[i] = values[i - 1];
+		}
+		userNames = names;
+		list = new JList(names);
+        list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        list.setSelectedIndex(0);
+        list.addListSelectionListener(this);
+        listScrollPane.setViewportView(list);
 	}
 }
