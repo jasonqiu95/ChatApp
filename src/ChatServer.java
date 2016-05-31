@@ -221,10 +221,13 @@ public class ChatServer {
 				return false;
 			}
 			ClientConnection conn = clients.get(mess.target);
-			conn.writer.writeObject(new ChatMessage(ChatMessage.BROAD,
-													"**PRIVATE** " 
-													+ client.name + " says: " 
-													+ mess.content, null));
+			ChatMessage newMess = new ChatMessage(ChatMessage.BROAD,
+					"**PRIVATE** " 
+					+ client.name + " says: " 
+					+ mess.content, null);
+			conn.writer.writeObject(newMess);
+			conn = clients.get(client.name);
+			conn.writer.writeObject(newMess);
 			return true;
 		}
 		
