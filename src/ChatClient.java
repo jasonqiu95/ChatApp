@@ -24,11 +24,11 @@ import javax.swing.JTextField;
  */
 public class ChatClient {
 
-    private BufferedReader in;
-    private PrintWriter out;
+    private ObjectInputStream in;
+    private ObjectOutputStream out;
     private ClientGUI gui;
 
-    
+    // a specialized task to fetch all currently logged in user names
     private class FetchUserNamesTask extends Thread {
     	Socket socket;
     	
@@ -55,13 +55,15 @@ public class ChatClient {
     		while (true) {
     			try {
     				System.out.println("Client is listening for input");
-    				String response = in.readLine();
+    				ChatMessage response = (ChatMessage)in.readObject();
     				System.out.println("Client is receiving input = " + response);
-    				if (response == null || response.equals("")) {
+    				if (response == null ||
+    					response.content == null ||
+    					response.content.equals("")) {
                         System.exit(0);
     				}
-    				gui.messageArea.append(response + "\n");
-    			} catch (IOException e) {
+    				gui.messageArea.append(response.content + "\n");
+    			} catch (Exception e) {
     				System.out.println("Cannot read from input stream");
     			}
     		}
@@ -88,7 +90,12 @@ public class ChatClient {
              */
             public void actionPerformed(ActionEvent e) {
             	System.out.println("Client is sending message to server");
-                out.println(gui.dataField.getText());
+            	ChatMessage mess = new ChatMessage(ChatMessage.BROAD, gui.dataField.getText(), null);
+            	try {
+					out.writeObject(mess);
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
                 System.out.println("Client sent message " + gui.dataField.getText());
 
                 gui.dataField.setText("");
@@ -98,27 +105,24 @@ public class ChatClient {
 
     public String login() {
     	try {
-    		String response;
-    		// first read two lines of description
-    		for (int i = 0; i < 2; i++) {
-    			gui.messageArea.append(in.readLine()+"\n");
-    		}
-    		response = in.readLine();
-    		System.out.println(response.equals("AGAIN\n"));
-    		System.out.println("response" + response);
-    		if (response.equals("AGAIN")) {
+    		ChatMessage response = (ChatMessage)in.readObject();
+//    		System.out.println(response.content.equals("AGAIN"));
+//    		System.out.println("response " + response.content);
+    		if (response.type == ChatMessage.AGAIN) {
+    			gui.messageArea.append(response.content);
     			String userName = JOptionPane.showInputDialog(
     	                gui.frame,
     	                "Enter your user name:",
     	                "Welcome to the EasyChat",
     	                JOptionPane.QUESTION_MESSAGE);
-    			out.println(userName);
+    			ChatMessage mess = new ChatMessage(ChatMessage.LOG, userName, null);
+    			out.writeObject(mess);
     			// try to login again
     			return login();
     		} else {
-    			return response;
+    			return response.content;
     		}
-    	} catch (IOException e) {
+    	} catch (Exception e) {
     		System.exit(0);
     	}
 		return null;
@@ -147,18 +151,15 @@ public class ChatClient {
 
         // Make connection and initialize streams
         Socket socket = new Socket(serverAddress, 9898);
-        in = new BufferedReader(
-                new InputStreamReader(socket.getInputStream()));
-        out = new PrintWriter(socket.getOutputStream(), true);
+        out = new ObjectOutputStream(socket.getOutputStream());
+        out.flush();
+        in = new ObjectInputStream(socket.getInputStream());
         // write the login username to server
-        out.println(userName);
+        out.writeObject(new ChatMessage(ChatMessage.LOG, userName,null));
         String response = login();
         
         // Consume the initial welcoming messages from the server
         gui.messageArea.append(response+"\n");
-        for (int i = 0; i < 2; i++) {
-            gui.messageArea.append(in.readLine() + "\n");
-        }
         new ServerListener().start();
         //new FetchUserNamesTask(socket).start();
     }
